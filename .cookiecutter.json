@@ -1,0 +1,14 @@
+{
+  "_output_dir": "/home/joselier",
+  "_template": "gh:cjolowicz/cookiecutter-hypermodern-python",
+  "author": "Jose Elier Fajardo",
+  "copyright_year": "2023",
+  "development_status": "Development Status :: 1 - Planning",
+  "email": "joselierfajardo@gmail.com",
+  "friendly_name": "NLP Models",
+  "github_user": "Joselier3",
+  "license": "MIT",
+  "package_name": "nlpmodels",
+  "project_name": "NLP-Models",
+  "version": "0.0.0"
+}
