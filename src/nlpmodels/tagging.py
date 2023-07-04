@@ -9,6 +9,7 @@ class HiddenMarkovModel():
     self.emissionProbabilities = {} # P(Wi|Ti) =  P(Wi, Ti) / P(Ti)
     self.transitionProbabilities = {} # P(Ti|Ti-1) = P(Ti, Ti-1) / P(Ti-1)
     self.corpusLength = 0
+    self.uniqueTags = []
 
   def _propertyCount(self):
     # TOKEN STRUCTURE
@@ -27,10 +28,12 @@ class HiddenMarkovModel():
     tagUnionCount = {} # C(Ti,Ti-1)
     wordUnionTagCount = {} # C(Wi,Ti)
 
-    lastTag = None
+    previousTag = None
+    wordList = []
     for tokenList in parse_incr(self.corpus):
       for token in tokenList:
         self.corpusLength += 1
+        word = token['form'].lower()
         tag = token[self.tagtype]
 
         # Tag Count
@@ -40,19 +43,23 @@ class HiddenMarkovModel():
           tagCount[tag] = 1
 
         # TagUnionTag Count
-        if lastTag:
+        if previousTag:
           try:
-            tagUnionCount[f'{tag},{lastTag}'] += 1
+            tagUnionCount[f'{tag},{previousTag}'] += 1
           except KeyError:
-            tagUnionCount[f'{tag},{lastTag}'] = 1
+            tagUnionCount[f'{tag},{previousTag}'] = 1
 
         # WordUnionTag Count
         try:
-          wordUnionTagCount[f'{token},{tag}'] += 1
+          wordUnionTagCount[f'{word},{tag}'] += 1
         except KeyError:
-          wordUnionTagCount[f'{token},{tag}'] = 1
+          wordUnionTagCount[f'{word},{tag}'] = 1
 
-        lastTag = tag
+        wordList.append(word)
+        previousTag = tag
+
+    self.uniqueWords = set(wordList)
+    self.uniqueTags = list(tagCount.keys())
 
     return tagCount, tagUnionCount, wordUnionTagCount
 
@@ -62,8 +69,29 @@ class HiddenMarkovModel():
 
     tagCount, tagUnionCount, wordUnionTagCount = self._propertyCount()
 
-    # Probability Calculation
-    self.uniqueTags = tagCount.keys()
+    # PROBABILITY CALCULATION
+    for tag in self.uniqueTags:
+      self.tagProbabilities[tag] = tagCount[tag] / self.corpusLength
 
-    for tag, count in tagCount.items():
-      self.tagProbabilities[tag] = count / self.corpusLength
+      for previousTag in self.uniqueTags:
+        key = f'{tag},{previousTag}'
+        try:
+          self.tagUnionProbabilities[key] = tagUnionCount[key] / self.corpusLength-1
+        except KeyError:
+          self.tagUnionProbabilities[key] = 0
+
+      for word in self.uniqueWords:
+        key = f'{word},{tag}'
+        try:
+          self.wordUnionTagProbabilities[key] = wordUnionTagCount[key] / self.corpusLength
+        except KeyError:
+          self.wordUnionTagProbabilities[key] = 0
+
+    # EMISSION AND TRANSITION PROBABILITIES CALCULATION
+    for tag in self.uniqueTags:
+      for word in self.uniqueWords:
+        self.emissionProbabilities[f'{word}|{tag}'] = self.wordUnionTagProbabilities[f'{word},{tag}'] / self.tagProbabilities[tag]
+
+      for previousTag in self.uniqueTags:
+        self.transitionProbabilities[f'{tag}|{previousTag}'] = self.tagUnionProbabilities[f'{tag},{previousTag}'] / self.tagProbabilities[previousTag]
+
