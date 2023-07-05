@@ -138,4 +138,11 @@ class HiddenMarkovModel():
       previousTag = tag
       previousViterbiProb = prob
 
+<<<<<<< HEAD
     return predictedTags
+=======
+    return predictedTags
+
+      
+
+>>>>>>> 18cef93ec4a870381d40e519e8cf1d3e4065437d
