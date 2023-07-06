@@ -1,4 +1,3 @@
-from conllu import parse_incr
 import numpy as np
 
 class HiddenMarkovModel():
@@ -36,7 +35,7 @@ class HiddenMarkovModel():
     previousTag = None
     wordList = []
 
-    for tokenList in parse_incr(self.corpus):
+    for tokenList in self.corpus:
       self.corpusTokenlistLength += 1
       initialTag = tokenList[0][self.tagtype]
       try:
@@ -85,7 +84,10 @@ class HiddenMarkovModel():
     # PROBABILITY CALCULATION
     for tag in self.uniqueTags:
       self.tagProbabilities[tag] = tagCount[tag] / self.corpusLength
-      self.initialTagProbabilities[tag] = initialTagCount[tag] / self.corpusTokenlistLength
+      try:
+        self.initialTagProbabilities[tag] = initialTagCount[tag] / self.corpusTokenlistLength
+      except KeyError:
+        self.initialTagProbabilities[tag] = 0
 
       for previousTag in self.uniqueTags:
         key = f'{tag},{previousTag}'
@@ -111,8 +113,10 @@ class HiddenMarkovModel():
 
   def tag(self, tokenList):
     viterbiInitialProbs = []
+    wordList = tokenList.copy()
+    wordList = [word.lower() for word in wordList]
     for tag in self.uniqueTags:
-      viterbiProb = self.initialTagProbabilities[tag]*self.emissionProbabilities[f'{tokenList[0]}|{tag}']
+      viterbiProb = self.initialTagProbabilities[tag]*self.emissionProbabilities[f'{wordList[0]}|{tag}']
       viterbiInitialProbs.append(viterbiProb)
 
     predictedTags = []
@@ -121,10 +125,10 @@ class HiddenMarkovModel():
     initialTag = self.uniqueTags[np.argmax(viterbiInitialProbs)]
     predictedTags.append(initialTag)
 
-    tokenList.pop(0)
+    wordList.pop(0)
     previousTag = initialTag
     previousViterbiProb = initialViterbiProb
-    for word in tokenList:
+    for word in wordList:
       viterbiProbs = []
 
       for tag in self.uniqueTags:
@@ -138,11 +142,6 @@ class HiddenMarkovModel():
       previousTag = tag
       previousViterbiProb = prob
 
-<<<<<<< HEAD
-    return predictedTags
-=======
-    return predictedTags
+    tagsDict = [(tokenList[i], predictedTags[i]) for i in range(len(tokenList))]
 
-      
-
->>>>>>> 18cef93ec4a870381d40e519e8cf1d3e4065437d
+    return tagsDict
