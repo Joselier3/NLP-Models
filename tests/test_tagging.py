@@ -8,7 +8,7 @@ import conllu
 
 from nlpmodels import tagging
 
-CORPUS_PATH = pathlib.Path('../../UD_Spanish-AnCora/es_ancora-ud-dev.conllu')
+CORPUS_PATH = pathlib.Path('/home/joselier/UD_Spanish-AnCora/es_ancora-ud-dev.conllu')
 TAGTYPE = 'upos'
 
 @pytest.fixture
