@@ -144,7 +144,10 @@ class HiddenMarkovModel():
 
       for tag in self.uniqueTags:
         try:
-          viterbiProb = previousViterbiProb * self.transitionProbabilities[f'{tag}|{previousTag}'] * self.emissionProbabilities[f'{word}|{tag}']
+          if viterbiProb != 0:
+            viterbiProb = previousViterbiProb * self.transitionProbabilities[f'{tag}|{previousTag}'] * self.emissionProbabilities[f'{word}|{tag}']
+          else:
+            viterbiProb = self.emissionProbabilities[f'{word}|{tag}']
         except KeyError:
           viterbiProb = 0
         viterbiProbs.append(viterbiProb)
