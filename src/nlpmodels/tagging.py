@@ -1,3 +1,7 @@
+"""
+This module gathers machine learning models for tagging purposes.
+"""
+
 import numpy as np
 import statistics
 
