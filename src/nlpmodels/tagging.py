@@ -113,10 +113,6 @@ class HiddenMarkovModel():
       for previousTag in self.uniqueTags:
         self.transitionProbabilities[f'{tag}|{previousTag}'] = self.tagUnionProbabilities[f'{tag},{previousTag}'] / self.tagProbabilities[previousTag]
 
-    # print(f'Initial Tag Probabilities: {random.sample(list(self.initialTagProbabilities.items()), 10)}')
-    # print(f"Emission Probabilities: {random.sample(list(self.emissionProbabilities.items()), 10)}")
-    # print(f"Transition Probabilities: {random.sample(list(self.transitionProbabilities.items()), 10)}")
-
   @staticmethod 
   def _isWordSeen(viterbiProbs):
     return any(viterbiProbs)
@@ -125,14 +121,14 @@ class HiddenMarkovModel():
     viterbiInitialProbs = []
     wordList = tokenList.copy()
     wordList = [word.lower() for word in wordList]
+
+    # First word probability calculation
     for tag in self.uniqueTags:
       try:
         viterbiProb = self.initialTagProbabilities[tag]*self.emissionProbabilities[f'{wordList[0]}|{tag}']
       except KeyError:
         viterbiProb = 0
       viterbiInitialProbs.append(viterbiProb)
-
-    # print(f'Viterbi Initial Probabilities: {viterbiInitialProbs}')
 
     predictedTags = []
     
@@ -147,7 +143,9 @@ class HiddenMarkovModel():
       viterbiProbs = []
 
       for tag in self.uniqueTags:
+        # If word given tag(emission probability) not seen (KeyError), assign probability of viterbi path to 0
         try:
+          # If previous word not seen (previousViterbiProb == 0), use emission probability instead
           if previousViterbiProb != 0:
             viterbiProb = previousViterbiProb * self.transitionProbabilities[f'{tag}|{previousTag}'] * self.emissionProbabilities[f'{word}|{tag}']
           else:
@@ -156,18 +154,16 @@ class HiddenMarkovModel():
           viterbiProb = 0
         viterbiProbs.append(viterbiProb)
 
-      # print(f"{word} -> {viterbiProbs} | {self._isWordSeen(viterbiProbs)}")
+      # If word seen, select the most probable tag, if not default to PROPN ()
       if self._isWordSeen(viterbiProbs):
         tag = self.uniqueTags[np.argmax(viterbiProbs)]
       else:
-        tag = self.uniqueTags[4] # PROPN is most common for words not previously seen
+        tag = self.uniqueTags[4] #(PROPN)
       prob = max(viterbiProbs)
       predictedTags.append(tag)
       
       previousTag = tag
       previousViterbiProb = prob
-
-      # print(f'{word} viterbi paths: {viterbiProbs}')
 
     tagsDict = [(tokenList[i], predictedTags[i]) for i in range(len(tokenList))]
 
