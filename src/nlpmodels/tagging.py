@@ -113,9 +113,9 @@ class HiddenMarkovModel():
       for previousTag in self.uniqueTags:
         self.transitionProbabilities[f'{tag}|{previousTag}'] = self.tagUnionProbabilities[f'{tag},{previousTag}'] / self.tagProbabilities[previousTag]
 
-    print(f'Initial Tag Probabilities: {random.sample(list(self.initialTagProbabilities.items()), 10)}')
-    print(f"Emission Probabilities: {random.sample(list(self.emissionProbabilities.items()), 10)}")
-    print(f"Transition Probabilities: {random.sample(list(self.transitionProbabilities.items()), 10)}")
+    # print(f'Initial Tag Probabilities: {random.sample(list(self.initialTagProbabilities.items()), 10)}')
+    # print(f"Emission Probabilities: {random.sample(list(self.emissionProbabilities.items()), 10)}")
+    # print(f"Transition Probabilities: {random.sample(list(self.transitionProbabilities.items()), 10)}")
 
   def tag(self, tokenList):
     viterbiInitialProbs = []
@@ -128,7 +128,7 @@ class HiddenMarkovModel():
         viterbiProb = 0
       viterbiInitialProbs.append(viterbiProb)
 
-    print(f'Viterbi Initial Probabilities: {viterbiInitialProbs}')
+    # print(f'Viterbi Initial Probabilities: {viterbiInitialProbs}')
 
     predictedTags = []
     
@@ -158,8 +158,37 @@ class HiddenMarkovModel():
       previousTag = tag
       previousViterbiProb = prob
 
-      print(f'{word} viterbi paths: {viterbiProbs}')
+      # print(f'{word} viterbi paths: {viterbiProbs}')
 
     tagsDict = [(tokenList[i], predictedTags[i]) for i in range(len(tokenList))]
 
     return tagsDict
+  
+  @staticmethod
+  def _accuracy(predictedTags, realTags):
+    try:
+      correctTags = 0
+      for i in range(len(predictedTags)):
+        if predictedTags[i] == realTags[i]:
+          correctTags += 1
+
+      accuracy = correctTags / len(predictedTags)
+      return accuracy
+    except IndexError:
+      print('Tag arrays are not the same size!')
+
+  
+  
+  def evaluate(self, testTokenlist):
+    realTags = [token[self.tagtype] for token in testTokenlist]
+    print(f"Real: {[(token['form'], token[self.tagtype]) for token in testTokenlist]}")
+
+    words = [token['form'] for token in testTokenlist]
+    predictedResult = self.tag(words)
+    print(f"Predicted: {predictedResult}")
+
+    predictedTags = [result[1] for result in predictedResult]
+    accuracy = self._accuracy(predictedTags, realTags)
+    print(f"Model Accuracy: {accuracy}")
+
+    return predictedResult

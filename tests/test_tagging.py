@@ -2,38 +2,40 @@
 import pytest
 from click.testing import CliRunner
 import pathlib
-import nltk
-nltk.download('punkt')
 import conllu
 
 from nlpmodels import tagging
 
-CORPUS_PATH = pathlib.Path('/home/joselier/UD_Spanish-AnCora/es_ancora-ud-dev.conllu')
+CORPUS_TRAIN_PATH = pathlib.Path('/home/joselier/UD_Spanish-AnCora/es_ancora-ud-train.conllu')
+CORPUS_TEST_PATH = pathlib.Path('/home/joselier/UD_Spanish-AnCora/es_ancora-ud-test.conllu')
 TAGTYPE = 'upos'
 
 @pytest.fixture
-def runner() -> CliRunner:
-    """Fixture for invoking command-line interfaces."""
-    return CliRunner()
-
-@pytest.fixture
-def spanish_corpus():
-    """Spanish AnCora Corpus for testing tagging models"""
-    with open(CORPUS_PATH, "r", encoding="utf-8") as corpusFile:
+def spanish_train_corpus():
+    """Spanish AnCora Corpus for training tagging models"""
+    with open(CORPUS_TRAIN_PATH, "r", encoding="utf-8") as corpusFile:
         ancoraCorpus = list(conllu.parse_incr(corpusFile))
     return ancoraCorpus
 
 @pytest.fixture
-def spanish_token_list() -> list:
-    """Sample Spanish Token List"""
-    sequence = 'Esta noche crearemos una escena increible'
-    tokenList = nltk.tokenize.word_tokenize(sequence, 'spanish')
-    return tokenList
+def spanish_sample_tokenlist():
+    """Sample token list for tag method"""
+    with open(CORPUS_TEST_PATH, "r", encoding="utf-8") as corpusFile:
+        ancoraCorpus = list(conllu.parse_incr(corpusFile))
+    sampleTokenlist = [token['form'] for token in ancoraCorpus[0]]
+    return sampleTokenlist
 
-def test_hidden_markov_model_spanish(spanish_corpus, spanish_token_list):
+@pytest.fixture
+def spanish_test_tokenlist():
+    """Test token list for evaluate method"""
+    with open(CORPUS_TEST_PATH, "r", encoding="utf-8") as corpusFile:
+        ancoraCorpus = list(conllu.parse_incr(corpusFile))
+    testTokenlist = ancoraCorpus[0]
+    return testTokenlist
+
+def test_hidden_markov_model_spanish(spanish_train_corpus, spanish_test_tokenlist):
     """Tag method returns a list"""
     model = tagging.HiddenMarkovModel()
-    model.train(TAGTYPE, spanish_corpus)
-    predictedTags = model.tag(spanish_token_list)
-    print(predictedTags)
+    model.train(TAGTYPE, spanish_train_corpus)
+    predictedTags = model.evaluate(spanish_test_tokenlist)
     assert type(predictedTags) == list
