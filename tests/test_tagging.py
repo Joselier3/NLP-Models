@@ -26,7 +26,7 @@ def spanish_corpus():
 @pytest.fixture
 def spanish_token_list() -> list:
     """Sample Spanish Token List"""
-    sequence = 'Hola, ayer me compre un helado muy grande y rico'
+    sequence = 'Esta noche crearemos una escena increible'
     tokenList = nltk.tokenize.word_tokenize(sequence, 'spanish')
     return tokenList
 

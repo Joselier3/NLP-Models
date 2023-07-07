@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 class HiddenMarkovModel():
   def __init__(self) -> None:
@@ -82,6 +83,7 @@ class HiddenMarkovModel():
     tagCount, tagUnionCount, wordUnionTagCount, initialTagCount = self._propertyCount()
 
     # PROBABILITY CALCULATION
+    print(self.uniqueTags)
     for tag in self.uniqueTags:
       self.tagProbabilities[tag] = tagCount[tag] / self.corpusLength
       try:
@@ -92,7 +94,7 @@ class HiddenMarkovModel():
       for previousTag in self.uniqueTags:
         key = f'{tag},{previousTag}'
         try:
-          self.tagUnionProbabilities[key] = tagUnionCount[key] / self.corpusLength-1
+          self.tagUnionProbabilities[key] = tagUnionCount[key] / (self.corpusLength-1)
         except KeyError:
           self.tagUnionProbabilities[key] = 0
 
@@ -111,13 +113,22 @@ class HiddenMarkovModel():
       for previousTag in self.uniqueTags:
         self.transitionProbabilities[f'{tag}|{previousTag}'] = self.tagUnionProbabilities[f'{tag},{previousTag}'] / self.tagProbabilities[previousTag]
 
+    print(f'Initial Tag Probabilities: {random.sample(list(self.initialTagProbabilities.items()), 10)}')
+    print(f"Emission Probabilities: {random.sample(list(self.emissionProbabilities.items()), 10)}")
+    print(f"Transition Probabilities: {random.sample(list(self.transitionProbabilities.items()), 10)}")
+
   def tag(self, tokenList):
     viterbiInitialProbs = []
     wordList = tokenList.copy()
     wordList = [word.lower() for word in wordList]
     for tag in self.uniqueTags:
-      viterbiProb = self.initialTagProbabilities[tag]*self.emissionProbabilities[f'{wordList[0]}|{tag}']
+      try:
+        viterbiProb = self.initialTagProbabilities[tag]*self.emissionProbabilities[f'{wordList[0]}|{tag}']
+      except KeyError:
+        viterbiProb = 0
       viterbiInitialProbs.append(viterbiProb)
+
+    print(f'Viterbi Initial Probabilities: {viterbiInitialProbs}')
 
     predictedTags = []
     
@@ -132,8 +143,13 @@ class HiddenMarkovModel():
       viterbiProbs = []
 
       for tag in self.uniqueTags:
-        viterbiProb = previousViterbiProb * self.transitionProbabilities[f'{tag}|{previousTag}'] * self.emissionProbabilities[f'{word}|{tag}']
+        try:
+          viterbiProb = previousViterbiProb * self.transitionProbabilities[f'{tag}|{previousTag}'] * self.emissionProbabilities[f'{word}|{tag}']
+        except KeyError:
+          viterbiProb = 0
         viterbiProbs.append(viterbiProb)
+
+      
 
       tag = self.uniqueTags[np.argmax(viterbiProbs)]
       prob = max(viterbiProbs)
@@ -141,6 +157,8 @@ class HiddenMarkovModel():
       
       previousTag = tag
       previousViterbiProb = prob
+
+      print(f'{word} viterbi paths: {viterbiProbs}')
 
     tagsDict = [(tokenList[i], predictedTags[i]) for i in range(len(tokenList))]
 
