@@ -117,6 +117,10 @@ class HiddenMarkovModel():
     # print(f"Emission Probabilities: {random.sample(list(self.emissionProbabilities.items()), 10)}")
     # print(f"Transition Probabilities: {random.sample(list(self.transitionProbabilities.items()), 10)}")
 
+  @staticmethod 
+  def _isWordSeen(viterbiProbs):
+    return any(viterbiProbs)
+
   def tag(self, tokenList):
     viterbiInitialProbs = []
     wordList = tokenList.copy()
@@ -144,7 +148,7 @@ class HiddenMarkovModel():
 
       for tag in self.uniqueTags:
         try:
-          if viterbiProb != 0:
+          if previousViterbiProb != 0:
             viterbiProb = previousViterbiProb * self.transitionProbabilities[f'{tag}|{previousTag}'] * self.emissionProbabilities[f'{word}|{tag}']
           else:
             viterbiProb = self.emissionProbabilities[f'{word}|{tag}']
@@ -152,9 +156,11 @@ class HiddenMarkovModel():
           viterbiProb = 0
         viterbiProbs.append(viterbiProb)
 
-      
-
-      tag = self.uniqueTags[np.argmax(viterbiProbs)]
+      # print(f"{word} -> {viterbiProbs} | {self._isWordSeen(viterbiProbs)}")
+      if self._isWordSeen(viterbiProbs):
+        tag = self.uniqueTags[np.argmax(viterbiProbs)]
+      else:
+        tag = self.uniqueTags[4] # PROPN is most common for words not previously seen
       prob = max(viterbiProbs)
       predictedTags.append(tag)
       
