@@ -1,5 +1,5 @@
 import numpy as np
-import random
+import statistics
 
 class HiddenMarkovModel():
   def __init__(self) -> None:
@@ -83,7 +83,6 @@ class HiddenMarkovModel():
     tagCount, tagUnionCount, wordUnionTagCount, initialTagCount = self._propertyCount()
 
     # PROBABILITY CALCULATION
-    print(self.uniqueTags)
     for tag in self.uniqueTags:
       self.tagProbabilities[tag] = tagCount[tag] / self.corpusLength
       try:
@@ -182,18 +181,37 @@ class HiddenMarkovModel():
     except IndexError:
       print('Tag arrays are not the same size!')
 
+  def _getTagWordLists(self, corpus):
+    corpusTags = []
+    corpusWords = []
+
+    for tokenList in corpus:
+      tokenlistTags = []
+      tokenlistWords = []
+      for token in tokenList:
+        tokenlistTags.append(token[self.tagtype])
+        tokenlistWords.append(token['form'])
+
+      corpusTags.append(tokenlistTags)
+      corpusWords.append(tokenlistWords)
+
+    return corpusWords, corpusTags
+
   
-  
-  def evaluate(self, testTokenlist):
-    realTags = [token[self.tagtype] for token in testTokenlist]
-    print(f"Real: {[(token['form'], token[self.tagtype]) for token in testTokenlist]}")
+  def evaluate(self, testCorpus):
+    corpusWords, corpusTags = self._getTagWordLists(testCorpus)
 
-    words = [token['form'] for token in testTokenlist]
-    predictedResult = self.tag(words)
-    print(f"Predicted: {predictedResult}")
+    predictedCorpusTags = []
+    for words in corpusWords:
+      predictedTags = [result[1] for result in self.tag(words)]
+      predictedCorpusTags.append(predictedTags)
 
-    predictedTags = [result[1] for result in predictedResult]
-    accuracy = self._accuracy(predictedTags, realTags)
-    print(f"Model Accuracy: {accuracy}")
+    accuracies = []
+    for i in range(len(predictedCorpusTags)):
+      accuracy = self._accuracy(predictedCorpusTags[i], corpusTags[i])
+      accuracies.append(accuracy)
+    mean_accuracy = statistics.mean(accuracies)
 
-    return predictedResult
+    print(f"Model Accuracy: {mean_accuracy}")
+
+    return mean_accuracy

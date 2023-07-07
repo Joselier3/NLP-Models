@@ -1,6 +1,5 @@
 """Test cases for the tagging module."""
 import pytest
-from click.testing import CliRunner
 import pathlib
 import conllu
 
@@ -26,16 +25,15 @@ def spanish_sample_tokenlist():
     return sampleTokenlist
 
 @pytest.fixture
-def spanish_test_tokenlist():
+def spanish_test_corpus():
     """Test token list for evaluate method"""
     with open(CORPUS_TEST_PATH, "r", encoding="utf-8") as corpusFile:
         ancoraCorpus = list(conllu.parse_incr(corpusFile))
-    testTokenlist = ancoraCorpus[0]
-    return testTokenlist
+    return ancoraCorpus
 
-def test_hidden_markov_model_spanish(spanish_train_corpus, spanish_test_tokenlist):
-    """Tag method returns a list"""
+def test_hidden_markov_model_spanish(spanish_train_corpus, spanish_test_corpus):
+    """Hidden Markov Model achieves test accuracy greater than 80%"""
     model = tagging.HiddenMarkovModel()
     model.train(TAGTYPE, spanish_train_corpus)
-    predictedTags = model.evaluate(spanish_test_tokenlist)
-    assert type(predictedTags) == list
+    accuracy = model.evaluate(spanish_test_corpus)
+    assert accuracy > 0.9
