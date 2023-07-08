@@ -43,5 +43,5 @@ def test_maximum_entropy_markov_model_spanish(spanish_train_corpus, spanish_test
     """MEMM achieves test accuracy greater than 90%"""
     model = tagging.MaximumEntropyMarkovModel()
     model.train(TAGTYPE, spanish_train_corpus)
-    accuracy = model.evaluateTokenlist(spanish_test_corpus[0])
+    accuracy = model.evaluate(spanish_test_corpus)
     assert accuracy > 0.9

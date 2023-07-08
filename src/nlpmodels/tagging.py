@@ -222,7 +222,11 @@ class HiddenMarkovModel():
     return mean_accuracy
 
 
-""" MAXIMUM ENTROPY MARKOV MODEL FOR TAGGING """
+""" 
+Maximum Entropy Markov Model for tagging. 
+Calculates probability based on context around a tag (Previous Tag, Word) instead of just previous tag like HMM.
+Uses HMM emission probabilities for not previously seen context.
+"""
 class MaximumEntropyMarkovModel(HiddenMarkovModel):
   def __init__(self) -> None:
     # \argmax_t \Pi P(t_i|w_i, t_{i-1})
@@ -230,6 +234,11 @@ class MaximumEntropyMarkovModel(HiddenMarkovModel):
     self.tagGivenContextProbs = {} # P(t_i|w_i, t_{i-1}) = P(w_i, t_{i-1}, t_i) / P(w_i, t_{i-1})
     self.tagUnionContextProbs = {} # P(w_i, t_{i-1}, t_i) = C(w_i, t_{i-1}, t_i) / ( corpusLength - 1 )
     self.contextProbs = {} # P(w_i, t_{i-1}) = C(w_i, t_{i-1}) / ( corpusLength - 1 )
+
+    # For default cases
+    self.tagProbabilities = {} # P(Ti) = C(Ti) / corpusLength
+    self.tagUnionProbabilities = {} # P(Ti, Ti-1) = C(Ti,Ti-1) / corpusLength-1
+    self.wordUnionTagProbabilities = {} # P(Wi, Ti) = C(Wi,Ti) / corpusLength
     self.initialTagProbs = {} # P(t_i^(0))
 
     self.emissionProbabilities = {} # P(Wi|Ti) =  P(Wi, Ti) / P(Ti)
@@ -255,6 +264,9 @@ class MaximumEntropyMarkovModel(HiddenMarkovModel):
 
     tagUnionContextCount = {} # C(Ti,Wi,Ti-1)
     contextCount = {} # C(Wi,Ti-1)
+
+    tagCount = {} # C(Ti)
+    wordUnionTagCount = {} # C(Wi,Ti)
     initialTagCount = {} # C(Ti^(0))
 
     previousTag = None # Ti-1
@@ -295,22 +307,41 @@ class MaximumEntropyMarkovModel(HiddenMarkovModel):
         except KeyError:
           contextCount[f'{word},{previousTag}'] = 1
 
+        # Tag Count
+        try:
+          tagCount[tag] += 1
+        except KeyError:
+          tagCount[tag] = 1
+
+        # WordUnionTag Count
+        try:
+          wordUnionTagCount[f'{word},{tag}'] += 1
+        except KeyError:
+          wordUnionTagCount[f'{word},{tag}'] = 1
+
         previousTag = tag
 
     # print(f'Tag Union Context Count: {list(tagUnionContextCount.items())[:10]}')
     # print(f'Context Count: {list(contextCount.items())[:10]}')
 
-    return tagUnionContextCount, contextCount, initialTagCount
+    return (tagUnionContextCount, contextCount, tagCount, wordUnionTagCount, initialTagCount)
 
 
   def train(self, tagtype, corpus):
     self.corpus = corpus
     self.tagtype = tagtype
 
-    tagUnionContextCount, contextCount, initialTagCount = self._propertyCount()
+    (tagUnionContextCount, 
+     contextCount, 
+     tagCount, 
+     wordUnionTagCount,
+     initialTagCount) = self._propertyCount()
 
     # PROBABILITY CALCULATION
     for tag in self.uniqueTags:
+      # Tag Probability
+      self.tagProbabilities[tag] = tagCount[tag] / self.corpusLength
+
       # Initial Tag Probability
       try:
         self.initialTagProbs[tag] = initialTagCount[tag] / self.corpusTokenlistLength
@@ -318,6 +349,7 @@ class MaximumEntropyMarkovModel(HiddenMarkovModel):
         self.initialTagProbs[tag] = 0
 
       for previousTag in self.uniqueTags:
+
         for word in self.uniqueWords:
           # Tag Union Context Probability P(Ti, Wi, Ti-1)
           TUCKey = f'{tag},{word},{previousTag}'
@@ -333,8 +365,19 @@ class MaximumEntropyMarkovModel(HiddenMarkovModel):
           except KeyError:
             self.contextProbs[CKey] = 0
 
+          WUTKey = f'{word},{tag}'
+          try:
+            self.wordUnionTagProbabilities[WUTKey] = wordUnionTagCount[WUTKey] / self.corpusLength
+          except KeyError:
+            self.wordUnionTagProbabilities[WUTKey] = 0
+
     # print(f'Tag Union Context Probabilities: {list(self.tagUnionContextProbs.items())[:10]}')
     # print(f'Context Probabilities: {list(self.contextProbs.items())[:10]}')
+
+    # EMISSION AND TRANSITION PROBABILITIES CALCULATION
+    for tag in self.uniqueTags:
+      for word in self.uniqueWords:
+        self.emissionProbabilities[f'{word}|{tag}'] = self.wordUnionTagProbabilities[f'{word},{tag}'] / self.tagProbabilities[tag]
 
   def tag(self, tokenList):
     viterbiInitialProbs = []
@@ -372,12 +415,14 @@ class MaximumEntropyMarkovModel(HiddenMarkovModel):
             CKey = f'{word},{previousTag}'
             viterbiProb = previousViterbiProb * self.tagUnionContextProbs[TUCKey] / self.contextProbs[CKey]
           else:
-            viterbiProb = self.tagUnionContextProbs[TUCKey] / self.contextProbs[CKey]
-        except (KeyError, ZeroDivisionError):
+            viterbiProb = self.emissionProbabilities[f'{word}|{tag}']
+        except(ZeroDivisionError):
+          viterbiProb = self.emissionProbabilities[f'{word}|{tag}']
+        except (KeyError):
           viterbiProb = 0
         viterbiProbs.append(viterbiProb)
 
-      print(f'Viterbi Paths for \"{word}\": {viterbiProbs}')
+      # print(f'Viterbi Paths for \"{word}\": {viterbiProbs}')
 
       # If word seen, select the most probable tag, if not default to PROPN ()
       if super()._isWordSeen(viterbiProbs):
@@ -394,7 +439,7 @@ class MaximumEntropyMarkovModel(HiddenMarkovModel):
 
     return tagsDict
   
-  def evaluateTokenlist(self, tokenList):
+  def _evaluateTokenlist(self, tokenList):
     words = [token['form'] for token in tokenList]
     realTags = [token[self.tagtype] for token in tokenList]
     realTuples = [(token['form'], token[self.tagtype]) for token in tokenList]
