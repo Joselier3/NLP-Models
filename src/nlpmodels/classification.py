@@ -1,5 +1,6 @@
 import math
 import numpy as np
+from sklearn.metrics import accuracy_score
 
 class NaiveBayesClassifier:
 	def __init__(self):
@@ -69,3 +70,12 @@ class NaiveBayesClassifier:
 
 		predictedCategory = categories[np.argmax(categoryProbPaths)]
 		return predictedCategory
+	
+	def evaluate(self, test_docs, test_categories):
+		predicted_categories = []
+		for doc in test_docs:
+			predicted_categories.append(self.classify(doc))
+		
+		accuracy = accuracy_score(predicted_categories, test_categories)
+		print(f'NaiveBayesClassifier Accuracy: {accuracy}')
+		return accuracy
