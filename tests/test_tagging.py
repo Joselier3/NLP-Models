@@ -31,9 +31,17 @@ def spanish_test_corpus():
         ancoraCorpus = list(conllu.parse_incr(corpusFile))
     return ancoraCorpus
 
+
 def test_hidden_markov_model_spanish(spanish_train_corpus, spanish_test_corpus):
-    """Hidden Markov Model achieves test accuracy greater than 80%"""
+    """Hidden Markov Model achieves test accuracy greater than 90%"""
     model = tagging.HiddenMarkovModel()
     model.train(TAGTYPE, spanish_train_corpus)
     accuracy = model.evaluate(spanish_test_corpus)
+    assert accuracy > 0.9
+
+def test_maximum_entropy_markov_model_spanish(spanish_train_corpus, spanish_test_corpus):
+    """MEMM achieves test accuracy greater than 90%"""
+    model = tagging.MaximumEntropyMarkovModel()
+    model.train(TAGTYPE, spanish_train_corpus)
+    accuracy = model.evaluateTokenlist(spanish_test_corpus[0])
     assert accuracy > 0.9
